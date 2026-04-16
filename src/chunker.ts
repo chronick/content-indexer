@@ -10,13 +10,48 @@ export interface TextChunk {
 }
 
 const TARGET_CHUNK_SIZE = 2000; // ~500 tokens
+const MAX_CHUNK_SIZE = 5000; // hard limit to stay under embedding context
 const MIN_CHUNK_SIZE = 200;
+
+/** Split a long text on single newlines or sentence boundaries */
+function hardSplit(text: string, maxSize: number): string[] {
+  if (text.length <= maxSize) return [text];
+
+  const pieces: string[] = [];
+  let remaining = text;
+  while (remaining.length > maxSize) {
+    // Try to split on newline
+    let splitAt = remaining.lastIndexOf("\n", maxSize);
+    if (splitAt < maxSize / 2) {
+      // Try sentence boundary
+      splitAt = remaining.lastIndexOf(". ", maxSize);
+      if (splitAt < maxSize / 2) {
+        // Hard split at maxSize
+        splitAt = maxSize;
+      } else {
+        splitAt += 2; // include ". "
+      }
+    }
+    pieces.push(remaining.slice(0, splitAt));
+    remaining = remaining.slice(splitAt);
+  }
+  if (remaining) pieces.push(remaining);
+  return pieces;
+}
 
 export function chunkMarkdown(text: string): TextChunk[] {
   if (!text.trim()) return [];
 
-  // Split on double newlines (paragraph boundaries)
-  const paragraphs = text.split(/\n\n+/);
+  // Split on double newlines (paragraph boundaries), then hard-split oversized paragraphs
+  const rawParagraphs = text.split(/\n\n+/);
+  const paragraphs: string[] = [];
+  for (const p of rawParagraphs) {
+    if (p.length > MAX_CHUNK_SIZE) {
+      paragraphs.push(...hardSplit(p, TARGET_CHUNK_SIZE));
+    } else {
+      paragraphs.push(p);
+    }
+  }
   const chunks: TextChunk[] = [];
   let currentChunk = "";
   let currentStart = 0;
