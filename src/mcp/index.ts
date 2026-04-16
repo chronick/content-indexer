@@ -119,7 +119,7 @@ export function createMcpServer() {
             const lines = [`**${r.title || r.path}**`];
             if (r.url) lines.push(r.url);
             if (tags.length) lines.push(`Tags: ${tags.join(", ")}`);
-            lines.push(`Indexed: ${r.indexedAt}`);
+            lines.push(`Date: ${r.date}`);
             return lines.join("\n");
           })
           .join("\n\n");

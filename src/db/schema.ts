@@ -6,6 +6,7 @@ export const documents = sqliteTable("documents", {
   title: text("title"),
   url: text("url"),
   tags: text("tags"), // JSON array
+  sourceDate: text("source_date"), // from frontmatter (e.g. bookmarked date)
   contentHash: text("content_hash").notNull(), // SHA-256
   chunkCount: integer("chunk_count").notNull().default(0),
   indexedAt: text("indexed_at")

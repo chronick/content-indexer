@@ -201,7 +201,8 @@ export async function combinedSearch(
 }
 
 /**
- * Get recently indexed documents, sorted by indexedAt descending.
+ * Get recently added documents. Uses source_date (frontmatter bookmarked/date)
+ * when available, falls back to indexed_at.
  */
 export function recentDocuments(days = 7, limit = 20) {
   const config = getConfig();
@@ -210,10 +211,13 @@ export function recentDocuments(days = 7, limit = 20) {
   const cutoff = new Date(Date.now() - days * 86400000).toISOString();
   return sqlite
     .prepare(
-      `SELECT id, path, title, url, tags, indexed_at as indexedAt
+      `SELECT id, path, title, url, tags,
+              COALESCE(source_date, indexed_at) as date,
+              source_date as sourceDate,
+              indexed_at as indexedAt
        FROM documents
-       WHERE indexed_at >= ?
-       ORDER BY indexed_at DESC
+       WHERE COALESCE(source_date, indexed_at) >= ?
+       ORDER BY COALESCE(source_date, indexed_at) DESC
        LIMIT ?`,
     )
     .all(cutoff, limit) as Array<{
@@ -222,6 +226,8 @@ export function recentDocuments(days = 7, limit = 20) {
     title: string | null;
     url: string | null;
     tags: string | null;
+    date: string;
+    sourceDate: string | null;
     indexedAt: string;
   }>;
 }

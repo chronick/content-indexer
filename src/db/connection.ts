@@ -75,6 +75,13 @@ export function getDb(dbPath: string) {
       END;
     `);
 
+    // Migrations: add columns that may not exist yet
+    try {
+      _sqlite.exec(`ALTER TABLE documents ADD COLUMN source_date TEXT`);
+    } catch {
+      // column already exists
+    }
+
     _db = drizzle(_sqlite, { schema });
   }
   return _db;

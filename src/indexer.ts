@@ -55,6 +55,10 @@ export async function indexFile(filePath: string): Promise<boolean> {
   const { data: frontmatter, content } = matter(raw);
   const title = (frontmatter.title as string) || null;
   const url = (frontmatter.url as string) || null;
+  const sourceDate =
+    (frontmatter.bookmarked as string) ||
+    (frontmatter.date as string) ||
+    null;
   const tags = frontmatter.tags
     ? JSON.stringify(
         Array.isArray(frontmatter.tags) ? frontmatter.tags : [frontmatter.tags],
@@ -108,6 +112,7 @@ export async function indexFile(filePath: string): Promise<boolean> {
         title,
         url,
         tags,
+        sourceDate,
         contentHash,
         chunkCount: textChunks.length,
         indexedAt: new Date().toISOString(),
