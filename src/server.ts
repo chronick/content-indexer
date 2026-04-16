@@ -1,9 +1,11 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { combinedSearch, semanticSearch, keywordSearch } from "./search.js";
 import { rebuild, getStats } from "./indexer.js";
 import { indexFile } from "./indexer.js";
 import { lookupDocument } from "./search.js";
+import { createMcpServer } from "./mcp/index.js";
 import { getConfig } from "./config.js";
 import path from "path";
 
@@ -77,6 +79,23 @@ export async function createServer() {
       return { result };
     },
   );
+
+  // MCP HTTP transport — stateless (one server+transport per request)
+  app.post("/mcp", async (request, reply) => {
+    reply.hijack();
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    const mcpServer = createMcpServer();
+    await mcpServer.connect(transport);
+    await transport.handleRequest(request.raw, reply.raw, request.body);
+  });
+
+  app.get("/mcp", async (_request, reply) => {
+    reply.status(405).send({ error: "Method not allowed in stateless mode" });
+  });
+
+  app.delete("/mcp", async (_request, reply) => {
+    reply.status(405).send({ error: "Method not allowed in stateless mode" });
+  });
 
   return app;
 }
