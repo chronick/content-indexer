@@ -27,17 +27,17 @@ export async function semanticSearch(
   const sqlite = getSqlite();
 
   const queryEmbedding = await embedQuery(query);
-  const vecBuffer = new Float32Array(queryEmbedding).buffer;
+  const vecJson = JSON.stringify(queryEmbedding);
 
   const vecResults = sqlite
     .prepare(
       `SELECT chunk_id, distance
        FROM vec_chunks
-       WHERE embedding MATCH ?
+       WHERE embedding MATCH vec_f32(?)
        ORDER BY distance
        LIMIT ?`,
     )
-    .all(Buffer.from(vecBuffer), limit * 2) as Array<{
+    .all(vecJson, limit * 2) as Array<{
     chunk_id: number;
     distance: number;
   }>;

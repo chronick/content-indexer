@@ -122,7 +122,7 @@ export async function indexFile(filePath: string): Promise<boolean> {
       "INSERT INTO chunks (document_id, chunk_index, content, start_offset, end_offset) VALUES (?, ?, ?, ?, ?)",
     );
     const insertVec = sqlite.prepare(
-      "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
+      "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, vec_f32(?))",
     );
 
     for (let i = 0; i < textChunks.length; i++) {
@@ -136,9 +136,9 @@ export async function indexFile(filePath: string): Promise<boolean> {
       );
       const chunkId = Number(chunkResult.lastInsertRowid);
 
-      // sqlite-vec expects a Float32Array
-      const vecBuffer = new Float32Array(embeddings[i]).buffer;
-      insertVec.run(chunkId, Buffer.from(vecBuffer));
+      // sqlite-vec expects JSON array string via vec_f32()
+      const vecJson = JSON.stringify(embeddings[i]);
+      insertVec.run(chunkId, vecJson);
     }
   });
 
