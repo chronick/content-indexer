@@ -57,6 +57,7 @@ export async function indexFile(filePath: string): Promise<boolean> {
   const url = (frontmatter.url as string) || null;
   const sourceDate =
     (frontmatter.bookmarked as string) ||
+    (frontmatter.bookmark_date as string) ||
     (frontmatter.date as string) ||
     null;
   const tags = frontmatter.tags
