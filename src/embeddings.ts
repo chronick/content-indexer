@@ -4,6 +4,9 @@ import { getConfig } from "./config.js";
  * Generate embeddings via Ollama's /api/embed endpoint.
  * Batches up to 32 texts per call.
  */
+// nomic-embed-text supports ~8192 tokens; truncate to ~6000 chars to be safe
+const MAX_EMBED_CHARS = 6000;
+
 export async function embed(texts: string[]): Promise<number[][]> {
   const config = getConfig();
 
@@ -13,7 +16,9 @@ export async function embed(texts: string[]): Promise<number[][]> {
   const batchSize = 32;
 
   for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
+    const batch = texts
+      .slice(i, i + batchSize)
+      .map((t) => (t.length > MAX_EMBED_CHARS ? t.slice(0, MAX_EMBED_CHARS) : t));
 
     const res = await fetch(`${config.OLLAMA_HOST}/api/embed`, {
       method: "POST",
