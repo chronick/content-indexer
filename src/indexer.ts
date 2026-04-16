@@ -9,6 +9,20 @@ import { chunkMarkdown } from "./chunker.js";
 import { embed } from "./embeddings.js";
 import { getConfig, getDbPath } from "./config.js";
 
+function findMarkdownFiles(dir: string): string[] {
+  const results: string[] = [];
+  if (!fs.existsSync(dir)) return results;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...findMarkdownFiles(full));
+    } else if (entry.name.endsWith(".md")) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
 function hashContent(content: string): string {
   return crypto.createHash("sha256").update(content).digest("hex");
 }
@@ -187,10 +201,7 @@ export async function rebuild(): Promise<{ indexed: number; failed: number }> {
     return { indexed: 0, failed: 0 };
   }
 
-  const files = fs
-    .readdirSync(config.CONTENT_DIR)
-    .filter((f) => f.endsWith(".md"))
-    .map((f) => path.join(config.CONTENT_DIR, f));
+  const files = findMarkdownFiles(config.CONTENT_DIR);
 
   console.log(`Rebuilding index: ${files.length} files found`);
 
