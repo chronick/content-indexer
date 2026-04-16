@@ -242,8 +242,12 @@ export function getStats() {
   const db = getDb(getDbPath(config));
   const sqlite = getSqlite();
 
-  const docCount = db.select().from(documents).all().length;
-  const chunkCount = db.select().from(chunks).all().length;
+  const docCount = (sqlite
+    .prepare("SELECT count(*) as cnt FROM documents")
+    .get() as { cnt: number }).cnt;
+  const chunkCount = (sqlite
+    .prepare("SELECT count(*) as cnt FROM chunks")
+    .get() as { cnt: number }).cnt;
 
   const vecCount = sqlite
     .prepare("SELECT count(*) as cnt FROM vec_chunks")

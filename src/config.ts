@@ -3,10 +3,10 @@ import { z } from "zod";
 
 const envSchema = z.object({
   CONTENT_DIR: z.string().default(
-    path.join(process.env.HOME || "~", "rig/data/bookmarks/content"),
+    path.join(process.env.HOME || ".", ".content-indexer/content"),
   ),
   DATA_DIR: z.string().default(
-    path.join(process.env.HOME || "~", "rig/data/content-index"),
+    path.join(process.env.HOME || ".", ".content-indexer/data"),
   ),
   OLLAMA_HOST: z.string().default("http://localhost:11434"),
   EMBED_MODEL: z.string().default("nomic-embed-text"),

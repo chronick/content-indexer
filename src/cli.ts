@@ -19,8 +19,8 @@ Commands:
   mcp               Run MCP stdio server
 
 Environment:
-  CONTENT_DIR    Content directory (default: ~/rig/data/bookmarks/content)
-  DATA_DIR       Index database directory (default: ~/rig/data/content-index)
+  CONTENT_DIR    Content directory (default: ~/.content-indexer/content)
+  DATA_DIR       Index database directory (default: ~/.content-indexer/data)
   OLLAMA_HOST    Ollama API host (default: http://localhost:11434)
   EMBED_MODEL    Embedding model (default: nomic-embed-text)
 `.trim());
