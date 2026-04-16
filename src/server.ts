@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { combinedSearch, semanticSearch, keywordSearch } from "./search.js";
+import { combinedSearch, semanticSearch, keywordSearch, recentDocuments } from "./search.js";
 import { rebuild, getStats } from "./indexer.js";
 import { indexFile } from "./indexer.js";
 import { lookupDocument } from "./search.js";
@@ -77,6 +77,16 @@ export async function createServer() {
         return { error: "Provide 'url' or 'title' parameter" };
       const result = lookupDocument({ url, title });
       return { result };
+    },
+  );
+
+  app.get<{ Querystring: { days?: string; limit?: string } }>(
+    "/recent",
+    async (req) => {
+      const days = Number(req.query.days) || 7;
+      const limit = Number(req.query.limit) || 20;
+      const results = recentDocuments(days, limit);
+      return { results };
     },
   );
 

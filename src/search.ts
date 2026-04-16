@@ -201,6 +201,32 @@ export async function combinedSearch(
 }
 
 /**
+ * Get recently indexed documents, sorted by indexedAt descending.
+ */
+export function recentDocuments(days = 7, limit = 20) {
+  const config = getConfig();
+  const sqlite = getSqlite();
+
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+  return sqlite
+    .prepare(
+      `SELECT id, path, title, url, tags, indexed_at as indexedAt
+       FROM documents
+       WHERE indexed_at >= ?
+       ORDER BY indexed_at DESC
+       LIMIT ?`,
+    )
+    .all(cutoff, limit) as Array<{
+    id: number;
+    path: string;
+    title: string | null;
+    url: string | null;
+    tags: string | null;
+    indexedAt: string;
+  }>;
+}
+
+/**
  * Look up a document by URL or title.
  */
 export function lookupDocument(opts: { url?: string; title?: string }) {

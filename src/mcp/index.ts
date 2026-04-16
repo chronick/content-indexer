@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { getConfig, getDbPath } from "../config.js";
 import { getDb } from "../db/connection.js";
-import { combinedSearch, lookupDocument } from "../search.js";
+import { combinedSearch, lookupDocument, recentDocuments } from "../search.js";
 import { getStats } from "../indexer.js";
 
 export function createMcpServer() {
@@ -82,6 +82,50 @@ export function createMcpServer() {
 
         return {
           content: [{ type: "text" as const, text }],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `ERROR: ${err instanceof Error ? err.message : String(err)}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "recent_content",
+    "Get recently indexed documents — bookmarks, articles, or other content added in the last N days. Useful for standups, digests, and seeing what's new.",
+    {
+      days: z.number().optional().describe("Look back N days (default 7)"),
+      limit: z.number().optional().describe("Max results (default 20)"),
+    },
+    async ({ days, limit }) => {
+      try {
+        const results = recentDocuments(days || 7, limit || 20);
+        if (results.length === 0) {
+          return {
+            content: [{ type: "text" as const, text: "No new content in that period." }],
+          };
+        }
+
+        const formatted = results
+          .map((r) => {
+            const tags = r.tags ? JSON.parse(r.tags) as string[] : [];
+            const lines = [`**${r.title || r.path}**`];
+            if (r.url) lines.push(r.url);
+            if (tags.length) lines.push(`Tags: ${tags.join(", ")}`);
+            lines.push(`Indexed: ${r.indexedAt}`);
+            return lines.join("\n");
+          })
+          .join("\n\n");
+
+        return {
+          content: [{ type: "text" as const, text: `${results.length} items:\n\n${formatted}` }],
         };
       } catch (err) {
         return {
