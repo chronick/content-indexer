@@ -98,12 +98,33 @@ export async function semanticSearch(
 }
 
 /**
+ * Sanitize a free-text query for FTS5. FTS5 has special characters
+ * (quotes, parens, colons, brackets, hyphens) that can break the parser.
+ * We extract bareword tokens and OR them together so the search is
+ * forgiving rather than strict.
+ */
+function sanitizeFtsQuery(query: string): string {
+  const tokens = query
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 2);
+  if (tokens.length === 0) return "";
+  // Quote each token to avoid any remaining FTS5 operator interpretation,
+  // and OR them so partial matches still rank.
+  return tokens.map((t) => `"${t}"`).join(" OR ");
+}
+
+/**
  * Keyword search using FTS5.
  */
 export function keywordSearch(query: string, limit = 10): SearchResult[] {
   const config = getConfig();
   const db = getDb(getDbPath(config));
   const sqlite = getSqlite();
+
+  const ftsQuery = sanitizeFtsQuery(query);
+  if (!ftsQuery) return [];
 
   const ftsResults = sqlite
     .prepare(
@@ -113,7 +134,7 @@ export function keywordSearch(query: string, limit = 10): SearchResult[] {
        ORDER BY rank
        LIMIT ?`,
     )
-    .all(query, limit * 2) as Array<{ rowid: number; rank: number }>;
+    .all(ftsQuery, limit * 2) as Array<{ rowid: number; rank: number }>;
 
   if (ftsResults.length === 0) return [];
 
@@ -177,10 +198,22 @@ export async function combinedSearch(
   query: string,
   limit = 10,
 ): Promise<SearchResult[]> {
-  const [semanticResults, keywordResults] = await Promise.all([
+  const [semanticOutcome, keywordOutcome] = await Promise.allSettled([
     semanticSearch(query, limit),
-    Promise.resolve(keywordSearch(query, limit)),
+    Promise.resolve().then(() => keywordSearch(query, limit)),
   ]);
+
+  const semanticResults =
+    semanticOutcome.status === "fulfilled" ? semanticOutcome.value : [];
+  const keywordResults =
+    keywordOutcome.status === "fulfilled" ? keywordOutcome.value : [];
+
+  if (semanticOutcome.status === "rejected") {
+    console.error("[search] semantic failed:", semanticOutcome.reason);
+  }
+  if (keywordOutcome.status === "rejected") {
+    console.error("[search] keyword failed:", keywordOutcome.reason);
+  }
 
   // Merge, dedup by documentId, prefer semantic score
   const seen = new Map<number, SearchResult>();
