@@ -45,10 +45,10 @@ export function getDb(dbPath: string) {
     `);
 
     // Create sqlite-vec virtual table (768 dims for nomic-embed-text)
+    // Use implicit rowid (maps to chunks.id) — no explicit PK column
     _sqlite.exec(`
       CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
-        chunk_id INTEGER PRIMARY KEY,
-        embedding FLOAT[768]
+        embedding float[768]
       );
     `);
 

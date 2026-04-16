@@ -92,7 +92,7 @@ export async function indexFile(filePath: string): Promise<boolean> {
 
       for (const c of oldChunks) {
         sqlite
-          .prepare("DELETE FROM vec_chunks WHERE chunk_id = ?")
+          .prepare("DELETE FROM vec_chunks WHERE rowid = ?")
           .run(c.id);
       }
 
@@ -121,10 +121,6 @@ export async function indexFile(filePath: string): Promise<boolean> {
     const insertChunk = sqlite.prepare(
       "INSERT INTO chunks (document_id, chunk_index, content, start_offset, end_offset) VALUES (?, ?, ?, ?, ?)",
     );
-    const insertVec = sqlite.prepare(
-      "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, vec_f32(?))",
-    );
-
     for (let i = 0; i < textChunks.length; i++) {
       const tc = textChunks[i];
       const chunkResult = insertChunk.run(
@@ -136,9 +132,14 @@ export async function indexFile(filePath: string): Promise<boolean> {
       );
       const chunkId = Number(chunkResult.lastInsertRowid);
 
-      // sqlite-vec expects JSON array string via vec_f32()
+      // sqlite-vec + better-sqlite3: multiple ? params don't work with vec0.
+      // Interpolate the integer rowid into SQL (safe — always a controlled integer).
       const vecJson = JSON.stringify(embeddings[i]);
-      insertVec.run(chunkId, vecJson);
+      sqlite
+        .prepare(
+          `INSERT INTO vec_chunks (rowid, embedding) VALUES (${chunkId}, ?)`,
+        )
+        .run(vecJson);
     }
   });
 
@@ -172,7 +173,7 @@ export function removeFile(filePath: string): boolean {
 
   const txn = sqlite.transaction(() => {
     for (const c of docChunks) {
-      sqlite.prepare("DELETE FROM vec_chunks WHERE chunk_id = ?").run(c.id);
+      sqlite.prepare("DELETE FROM vec_chunks WHERE rowid = ?").run(c.id);
     }
     db.delete(chunks).where(eq(chunks.documentId, existing.id)).run();
     db.delete(documents).where(eq(documents.id, existing.id)).run();

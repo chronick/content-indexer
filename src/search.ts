@@ -31,21 +31,21 @@ export async function semanticSearch(
 
   const vecResults = sqlite
     .prepare(
-      `SELECT chunk_id, distance
+      `SELECT rowid, distance
        FROM vec_chunks
        WHERE embedding MATCH vec_f32(?)
        ORDER BY distance
        LIMIT ?`,
     )
     .all(vecJson, limit * 2) as Array<{
-    chunk_id: number;
+    rowid: number;
     distance: number;
   }>;
 
   if (vecResults.length === 0) return [];
 
-  const chunkIds = vecResults.map((r) => r.chunk_id);
-  const distanceMap = new Map(vecResults.map((r) => [r.chunk_id, r.distance]));
+  const chunkIds = vecResults.map((r) => r.rowid);
+  const distanceMap = new Map(vecResults.map((r) => [r.rowid, r.distance]));
 
   const matchedChunks = db
     .select()
