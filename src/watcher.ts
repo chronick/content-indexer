@@ -41,7 +41,11 @@ export function startWatcher(contentDir: string) {
     processing = false;
   }
 
-  const watcher = watch(path.join(contentDir, "**/*.md"), {
+  // chokidar v4 dropped glob pattern support — watch the directory and
+  // filter for .md files in the event handlers.
+  const isMarkdown = (filePath: string) => filePath.endsWith(".md");
+
+  const watcher = watch(contentDir, {
     ignoreInitial: true,
     awaitWriteFinish: {
       stabilityThreshold: 500,
@@ -50,16 +54,19 @@ export function startWatcher(contentDir: string) {
   });
 
   watcher.on("add", (filePath) => {
+    if (!isMarkdown(filePath)) return;
     queue.push({ type: "add", filePath });
     processQueue();
   });
 
   watcher.on("change", (filePath) => {
+    if (!isMarkdown(filePath)) return;
     queue.push({ type: "change", filePath });
     processQueue();
   });
 
   watcher.on("unlink", (filePath) => {
+    if (!isMarkdown(filePath)) return;
     queue.push({ type: "unlink", filePath });
     processQueue();
   });

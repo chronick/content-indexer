@@ -55,10 +55,18 @@ export async function indexFile(filePath: string): Promise<boolean> {
   const { data: frontmatter, content } = matter(raw);
   const title = (frontmatter.title as string) || null;
   const url = (frontmatter.url as string) || null;
+  // YAML auto-parses unquoted ISO timestamps (e.g. `bookmarked: 2025-01-14T20:15:15Z`)
+  // into Date objects, which can't be bound to SQLite. Normalize to ISO string.
+  const toIsoString = (v: unknown): string | null => {
+    if (v == null) return null;
+    if (v instanceof Date) return v.toISOString();
+    if (typeof v === "string") return v;
+    return String(v);
+  };
   const sourceDate =
-    (frontmatter.bookmarked as string) ||
-    (frontmatter.bookmark_date as string) ||
-    (frontmatter.date as string) ||
+    toIsoString(frontmatter.bookmarked) ||
+    toIsoString(frontmatter.bookmark_date) ||
+    toIsoString(frontmatter.date) ||
     null;
   const tags = frontmatter.tags
     ? JSON.stringify(
